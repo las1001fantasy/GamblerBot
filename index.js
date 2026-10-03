@@ -9,38 +9,73 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 
 app.use(express.json());
 
-// 📅 1. PROGRAMACIÓN AUTOMÁTICA (Todos los días a las 16:00)
+// 🏈 MAPEO DE GRUPOS DE TELEGRAM -> LIGAS DE FLEAFLICKER
+// Asocia cada Chat ID de Telegram con el League ID de Fleaflicker
+// ⚠️ Reemplaza 'ID_FLEAFLICKER_1' e 'ID_FLEAFLICKER_2' por los IDs numéricos de tus ligas en la web de Fleaflicker
+const LIGAS = {
+    '-1001039393022': 'ID_FLEAFLICKER_1', // Grupo Original
+    '-100960446115': 'ID_FLEAFLICKER_2'   // Segundo Grupo
+};
+
+// 📅 AUTOMATIZACIÓN DIARIA (Se ejecuta a las 16:00 Madrid para cada grupo)
 cron.schedule('0 16 * * *', async () => {
-    console.log('⏰ ¡Son las 16:00! Ejecutando el check automático...');
-    // Pasamos "false" para que actúe en modo automático (solo habla si hay errores)
-    await verificarRosters(bot, false); 
+    console.log('⏰ ¡Son las 16:00! Ejecutando el check automático para todas las ligas...');
+    
+    for (const [chatId, leagueId] of Object.entries(LIGAS)) {
+        try {
+            console.log(`📡 Revisando automatización para el grupo ${chatId} (Liga: ${leagueId})...`);
+            await verificarRosters(bot, false, null, leagueId, chatId);
+        } catch (error) {
+            console.error(`❌ Error en revisión automática para grupo ${chatId}:`, error);
+        }
+    }
 }, {
     scheduled: true,
     timezone: "Europe/Madrid"
 });
 
-// 💬 2. COMANDO MANUAL (Cuando alguien escribe /check en el chat)
-bot.command('check', async (ctx) => {
-    console.log(`🤖 Comando /check recibido de ${ctx.from.username}`);
-    await ctx.reply('🔄 Conectando con Fleaflicker y revisando los rosters... Un momento.');
-    
-    // Pasamos "true" para indicarle que es un comando manual
-    // Así, si todo está limpio, responderá "¡Todos los rosters están limpios!" en vez de callarse.
-    await verificarRosters(bot, true, ctx);
+// 💬 ESCUCHAR PALABRAS CLAVE SIN BARRA ("check", "rosters", etc.)
+bot.hears(['check', 'rosters', 'revisar rosters', 'fleaflicker'], async (ctx) => {
+    const chatId = ctx.chat.id.toString();
+    const leagueId = LIGAS[chatId];
+
+    console.log(`📌 Mensaje recibido en Chat ID: ${chatId}`);
+
+    if (!leagueId) {
+        return ctx.reply('⚠️️ Este grupo no está configurado en el bot.');
+    }
+
+    await ctx.reply(`🔄 Conectando con Fleaflicker (Liga: ${leagueId}) y revisando los rosters... Un momento.`);
+    await verificarRosters(bot, true, ctx, leagueId, chatId);
 });
 
-// Lanzar el bot de Telegram
-bot.launch();
+// 💬 COMANDO TRADICIONAL /check CON BARRA
+bot.command('check', async (ctx) => {
+    const chatId = ctx.chat.id.toString();
+    const leagueId = LIGAS[chatId];
 
-// Ruta de control simple para Express
+    if (!leagueId) {
+        return ctx.reply('⚠️ Este grupo no está configurado en el bot.');
+    }
+
+    await ctx.reply(`🔄 Conectando con Fleaflicker (Liga: ${leagueId}) y revisando los rosters... Un momento.`);
+    await verificarRosters(bot, true, ctx, leagueId, chatId);
+});
+
+// 🚀 INICIAR BOT EN TELEGRAM
+bot.launch();
+console.log('🤖 Bot de Fleaflicker multiliga iniciado correctamente...');
+
+// 🏠 SERVIDOR EXPRESS (HEALTH CHECK)
 app.get('/', (req, res) => {
-    res.send('El bot de la liga Fleaflicker está activo y vigilando.');
+    res.send('El bot de Fleaflicker multiliga está activo.');
 });
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-    console.log(`Servidor del bot escuchando en el puerto ${PORT}`);
+    console.log(`Servidor Web escuchando en el puerto ${PORT}`);
 });
-// Manejo de cierre limpio
+
+// 🛑 MANEJO DE CIERRE LIMPIO
 process.once('SIGINT', () => bot.stop('SIGINT'));
 process.once('SIGTERM', () => bot.stop('SIGTERM'));
