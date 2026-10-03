@@ -13,7 +13,7 @@ app.use(express.json());
 // Asocia cada Chat ID de Telegram con el League ID de Fleaflicker
 // ⚠️ Reemplaza 'ID_FLEAFLICKER_1' e 'ID_FLEAFLICKER_2' por los IDs numéricos de tus ligas en la web de Fleaflicker
 const LIGAS = {
-    '-1001039393022': '349686', // The Luckiest Gambler
+    '-1002659169780': '349686', // The Luckiest Gambler
     '-100960446115': '338836'   // La Suerte en sus Manos 3
 };
 
