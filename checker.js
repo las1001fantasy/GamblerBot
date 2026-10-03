@@ -1,6 +1,12 @@
 const axios = require('axios');
 
-async function verificarRosters(bot) {
+/**
+ * Verifica los rosters de la liga en Fleaflicker.
+ * @param {Object} bot - Instancia del bot de Telegraf.
+ * @param {boolean} esManual - Indica si se ha ejecutado por comando (true) o por el cron automático (false).
+ * @param {Object} ctx - El contexto de Telegraf (solo necesario si esManual es true para responder al mensaje).
+ */
+async function verificarRosters(bot, esManual = false, ctx = null) {
     try {
         const leagueId = process.env.FLEAFLICKER_LEAGUE_ID; 
         
@@ -8,7 +14,7 @@ async function verificarRosters(bot) {
         const url = `https://www.fleaflicker.com/api/FetchLeagueRosters?league_id=${leagueId}`;
         const response = await axios.get(url);
         
-        const rosters = response.data.rosters; // Los 12 equipos de la liga
+        const rosters = response.data.rosters; // Lista de los equipos de la liga
 
         let mensajeAlerta = '⚠️ **ROSTERS ILEGALES DETECTADOS** ⚠️\n\n';
         let tieneErrores = false;
@@ -43,16 +49,28 @@ async function verificarRosters(bot) {
             }
         }
 
-        // 4. LA CONDICIÓN DE ORO: Solo enviar si hay algún error
+        // 4. RESPUESTA SEGÚN EL MODO (Manual o Automático)
         if (tieneErrores) {
-            await bot.telegram.sendMessage(process.env.CHAT_ID, mensajeAlerta, { parse_mode: 'Markdown' });
-            console.log('¡Infracciones detectadas! Mensaje enviado al grupo de Telegram.');
+            // Si hay errores, enviamos la lista de infractores
+            // Si es manual, responde al chat que lo pidió; si es el cron, va al grupo general por defecto
+            const destino = esManual ? ctx.chat.id : process.env.CHAT_ID;
+            await bot.telegram.sendMessage(destino, mensajeAlerta, { parse_mode: 'Markdown' });
+            console.log('¡Infracciones detectadas! Mensaje enviado.');
         } else {
             console.log('Todos los rosters están limpios. No se envía nada.');
+            
+            // SI ES MANUAL y la liga está limpia, el bot no se calla, avisa de que todo está OK
+            if (esManual && ctx) {
+                await ctx.reply('✅ ¡Buenas noticias! Todos los rosters de la liga están limpios y son 100% legales ahora mismo.');
+            }
         }
 
     } catch (error) {
         console.error('Error al conectar o procesar la API de Fleaflicker:', error);
+        // Si falla la API y alguien ha tirado el comando, le avisamos del error
+        if (esManual && ctx) {
+            await ctx.reply('❌ Hubo un error al conectar con Fleaflicker. Inténtalo de nuevo más tarde.');
+        }
     }
 }
 
