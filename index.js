@@ -14,7 +14,7 @@ app.use(express.json());
 // ⚠️ Reemplaza 'ID_FLEAFLICKER_1' e 'ID_FLEAFLICKER_2' por los IDs numéricos de tus ligas en la web de Fleaflicker
 const LIGAS = {
     '-1002659169780': '349686', // The Luckiest Gambler
-    '-100960446115': '338836'   // La Suerte en sus Manos 3
+    '-1004291664210': '338836'   // La Suerte en sus Manos 3
 };
 
 // 📅 AUTOMATIZACIÓN DIARIA (Se ejecuta a las 16:00 Madrid para cada grupo)
